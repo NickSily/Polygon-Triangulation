@@ -1,0 +1,78 @@
+/* styles.css */
+
+/* Apply a dark background and light text color to the body */
+body {
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Style headers */
+h1, h2, h3, h4, h5, h6 {
+    color: #ffffff;
+}
+
+/* Style links */
+a {
+    color: #bb86fc;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Style buttons */
+button {
+    background-color: #333333;
+    color: #e0e0e0;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #444444;
+}
+
+/* Style form inputs */
+input, textarea {
+    background-color: #333333;
+    color: #e0e0e0;
+    border: 1px solid #444444;
+    padding: 10px;
+}
+
+input::placeholder, textarea::placeholder {
+    color: #888888;
+}
+
+/* Style tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #444444;
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background-color: #333333;
+}
+
+td {
+    background-color: #222222;
+}
+
+/* Style code blocks */
+pre, code {
+    background-color: #333333;
+    color: #e0e0e0;
+    padding: 10px;
+    border-radius: 5px;
+}
