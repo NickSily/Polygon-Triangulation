@@ -1,5 +1,5 @@
 // Input: Polygon points (vertices) in clock-wise order
-// Ouptut: list of triangle coordinates
+// Output: list of triangle coordinates
 
 // Structure to allow for linked list
 class Vertex {
@@ -12,7 +12,11 @@ class Vertex {
   }
 }
 
-// Create a doubly linked list of vertices from the initial array of points
+/**
+ * Create a doubly linked list of vertices from the initial array of points.
+ * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates.
+ * @returns {Array.<Vertex>} - Circular doubly linked list of vertices.
+ */
 function createDoublyLinkedList(points) {
   if (points.length < 3) {
     throw new Error(`Needs at Least 3 Vertices, ${points.length} provided`);
@@ -30,10 +34,24 @@ function createDoublyLinkedList(points) {
   return vertices;
 }
 
+/**
+ * Triangulate a polygon using the specified triangulation method.
+ * @param {Array.<Array.<number>>} polygon - Array of [x, y] coordinates.
+ * @param {Function} triangulationMethod - Function to use for triangulation.
+ * @returns {Array.<Array.<Array.<number>>>} - List of triangles.
+ */
 function triangulate(polygon, triangulationMethod = naiveEarCutting) {
   return triangulationMethod(polygon);
 }
 
+/**
+ * Check if a vertex is an ear.
+ * @param {Array.<number>} a - Previous vertex.
+ * @param {Array.<number>} b - Current vertex.
+ * @param {Array.<number>} c - Next vertex.
+ * @param {Array.<Array.<number>>} otherPoints - Other vertices in the polygon.
+ * @returns {boolean} - True if the vertex is an ear, false otherwise.
+ */
 function isEar(a, b, c, otherPoints) {
   // make sure angle at b is convex
   if (!isConvex(a, b, c)) {
@@ -51,9 +69,12 @@ function isEar(a, b, c, otherPoints) {
 }
 
 /**
- * @param {Array.<number>} point - [x, y]
- * @param {Array.Array<number>} triangle - Point 2 [x, y]
- * @returns {boolean} - Is Point within triangle
+ * Check if a point is within a triangle.
+ * @param {Array.<number>} point - [x, y] coordinates.
+ * @param {Array.<number>} a - First vertex of the triangle.
+ * @param {Array.<number>} b - Second vertex of the triangle.
+ * @param {Array.<number>} c - Third vertex of the triangle.
+ * @returns {boolean} - True if the point is within the triangle, false otherwise.
  */
 function isWithinTriangle(point, a, b, c) {
   /*
@@ -102,12 +123,25 @@ function isWithinTriangle(point, a, b, c) {
   return false;
 }
 
+/**
+ * Calculate the cross product of two vectors.
+ * @param {Array.<number>} v1 - First vector.
+ * @param {Array.<number>} v2 - Second vector.
+ * @returns {number} - Cross product of the vectors.
+ */
 function cross(v1, v2) {
   // Return cross product of vectors v1, v2 respectively
 
   return v1[0] * v2[1] - v1[1] * v2[0];
 }
 
+/**
+ * Get the orientation of three points.
+ * @param {Array.<number>} p1 - First point.
+ * @param {Array.<number>} p2 - Second point.
+ * @param {Array.<number>} p3 - Third point.
+ * @returns {number} - 1 if counter-clockwise, -1 if clockwise, 0 if collinear.
+ */
 function getOrientation(p1, p2, p3) {
   // Orientation of 3 Points Can be
   // CCW (1), CW (-1), Collinear (0)
@@ -126,28 +160,22 @@ function getOrientation(p1, p2, p3) {
   }
 }
 
+/**
+ * Check if three points form a convex angle.
+ * @param {Array.<number>} a - First point.
+ * @param {Array.<number>} b - Second point.
+ * @param {Array.<number>} c - Third point.
+ * @returns {boolean} - True if the angle is convex, false otherwise.
+ */
 function isConvex(a, b, c) {
   return getOrientation(a, b, c) === 1;
 }
 
-// Naive Ear Cutting O(N^3)
-
-/*
-Time Complexity explanation
-    // Loop every vertex to find an ear O(N)
-        // Check it it's an ear in O(N)
-    O(N^2)
-
-    Go trough each vertex O(N) until finding an ear, and check if it's an ear in O(N)
-    thus O(N^2)
-
-    it's O(N2) for every ear we remove, we will remove n-3 ears, whith the input size reducing at every step
-    
-    So it will be a sum of:
-
-    N^2 + (n-1)^2 + (n-2)^2 + ... + 4^2 --> O(N^3) 
-    // Given sum of arithmetic series property
-*/
+/**
+ * Naive ear cutting algorithm for polygon triangulation.
+ * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates.
+ * @returns {Array.<Array.<Array.<number>>>} - List of triangles.
+ */
 function naiveEarCutting(points) {
   // Check for no colinear vertices
   // Check if polygon is simple
@@ -157,15 +185,14 @@ function naiveEarCutting(points) {
     throw new Error(`Needs at Least 3 Vertices, ${points.len} provided`);
   }
 
-  // Make a copy of the points array
-  // Keep track of remaining points to be triangulated
-  const remainingPoints = structuredClone(points);
-  // Create a circular doubly-Linked List from the points
+  // Create a circular doubly linked list from the points array
+  const vertices = createDoublyLinkedList(points);
+
   const triangles = [];
 
   let i = 1;
   // while remainingVertices > 3
-  while (remainingPoints.length > 3) {
+  while (vertices.length > 3) {
     let len = remainingPoints.length;
 
     let prev = remainingPoints.at(i - (1 % len));
@@ -190,6 +217,11 @@ function naiveEarCutting(points) {
   return triangles;
 }
 
+/**
+ * Optimized ear cutting algorithm for polygon triangulation.
+ * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates.
+ * @returns {Array.<Array.<Array.<number>>>} - List of triangles.
+ */
 function optimizedEarCutting(points) {
   /*Input Checking */
   // Check for no colinear vertices
