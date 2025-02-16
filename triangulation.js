@@ -1,8 +1,16 @@
 // Input: Polygon points (vertices) in clock-wise order
 // Output: list of triangle coordinates
 
-// Structure to allow for linked list
+/**
+ * Class representing a vertex in a polygon.
+ */
 class Vertex {
+  /**
+   * Create a vertex.
+   * @param {Array.<number>} point - [x, y] coordinates.
+   * @param {Vertex} [next=null] - Pointer to the next vertex.
+   * @param {Vertex} [prev=null] - Pointer to the previous vertex.
+   */
   constructor(point, next = null, prev = null) {
     this.point = point; // [x, y] coordinates
     this.next = next; // pointer to next vertex
@@ -13,9 +21,85 @@ class Vertex {
 }
 
 /**
+ * Class representing a circular doubly linked list.
+ */
+class CircularList {
+  /**
+   * Create a circular list.
+   * @param {Vertex} head - Head vertex of the list.
+   * @param {number} size - Size of the list.
+   */
+  constructor(head, size) {
+    this.head = head;
+    this.size = size;
+  }
+
+  /**
+   * Insert NewNode after Preivous node on the list
+   * @param {Vertex} newNode
+   * @param {Vertex} previous
+   */
+
+  insert(newNode, prev) {
+    let next = prev.next;
+
+    prev.next = newNode;
+    newNode.prev = prev;
+
+    if (next != null) {
+      newNode.next = next;
+      next.prev = newNode;
+    }
+
+    this.size++;
+  }
+
+  delete(node) {
+    if (node == null) {
+      throw new Error("Input is Null!");
+    }
+
+    if (node === this.head) {
+      updateHead();
+    }
+
+    // Connect prev and next
+    let prev = node.prev;
+    let next = node.next;
+
+    if (prev != null) {
+      prev.next = next;
+    }
+
+    if (next != null) {
+      next.prev = prev;
+    }
+
+    this.size--;
+  }
+
+  updateHead() {
+    if (this.head.next != null) {
+      this.head = this.head.next;
+      return;
+    }
+
+    if (this.head.prev != null) {
+      this.head = this.head.prev;
+      return;
+    }
+
+    // no more nodes left
+    this.head = null;
+    return;
+  }
+}
+
+/**
  * Create a doubly linked list of vertices from the initial array of points.
  * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates.
  * @returns {Array.<Vertex>} - Circular doubly linked list of vertices.
+ * @throws {Error} - If less than 3 vertices are provided.
  */
 function createDoublyLinkedList(points) {
   if (points.length < 3) {
@@ -75,6 +159,7 @@ function isEar(a, b, c, otherPoints) {
  * @param {Array.<number>} b - Second vertex of the triangle.
  * @param {Array.<number>} c - Third vertex of the triangle.
  * @returns {boolean} - True if the point is within the triangle, false otherwise.
+ * @throws {Error} - If the points provided are collinear.
  */
 function isWithinTriangle(point, a, b, c) {
   /*
@@ -175,6 +260,7 @@ function isConvex(a, b, c) {
  * Naive ear cutting algorithm for polygon triangulation.
  * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates.
  * @returns {Array.<Array.<Array.<number>>>} - List of triangles.
+ * @throws {Error} - If less than 3 vertices are provided.
  */
 function naiveEarCutting(points) {
   // Check for no colinear vertices
@@ -193,18 +279,20 @@ function naiveEarCutting(points) {
   let i = 1;
   // while remainingVertices > 3
   while (vertices.length > 3) {
-    let len = remainingPoints.length;
+    let len = vertices.length;
 
-    let prev = remainingPoints.at(i - (1 % len));
-    let curr = remainingPoints.at(i % len);
-    let next = remainingPoints.at(i + (1 % len));
+    let vertex = vertices.at(i % len);
+
+    let curr = vertex.point;
+    let prev = vertex.prev.point;
+    let next = vertex.next.point;
 
     if (isEar(prev, curr, next)) {
       // Add new Triangle
       triangles.push(prev, curr, next);
 
       // Remove the ear tip (keep only the new diagonal)
-      remainingPoints.splice(i % len);
+      removeVertex(vertices, vertex);
     } else {
       // check Next Vertex
       i++;
@@ -221,6 +309,7 @@ function naiveEarCutting(points) {
  * Optimized ear cutting algorithm for polygon triangulation.
  * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates.
  * @returns {Array.<Array.<Array.<number>>>} - List of triangles.
+ * @throws {Error} - If less than 3 vertices are provided.
  */
 function optimizedEarCutting(points) {
   /*Input Checking */
@@ -267,7 +356,8 @@ function optimizedEarCutting(points) {
       // Add new Triangle
       triangles.push(prev, curr, next);
 
-      // Remove the ear tip (keep only the new diagonal)
+      // Remove "Vertex from List"
+      removeVertex(vertices, vertex);
       remainingPoints.splice(i % len);
     } else {
       // check Next Vertex
