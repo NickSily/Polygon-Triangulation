@@ -29,92 +29,96 @@ class CircularList {
    * @param {Vertex} head - Head vertex of the list.
    * @param {number} size - Size of the list.
    */
-  constructor(head, size) {
-    this.head = head;
-    this.size = size;
+  constructor() {
+    this.head = null;
+    this.size = 0;
   }
 
   /**
-   * Insert NewNode after Preivous node on the list
-   * @param {Vertex} newNode
-   * @param {Vertex} previous
+   * Insert a new node after the previous node in the list.
+   * @param {Vertex} newNode - New vertex to be inserted.
+   * @param {Vertex} previous - Previous vertex after which the new node will be inserted.
+   * @throws {Error} - If the new node is null.
    */
-
-  insert(newNode, prev) {
-    let next = prev.next;
-
-    prev.next = newNode;
-    newNode.prev = prev;
-
-    if (next != null) {
-      newNode.next = next;
-      next.prev = newNode;
+  insert(newNode, previous) {
+    if (newNode == null) {
+      throw new Error("Input Node is Null");
     }
+
+    if (this.head == null) {
+      this.head = newNode;
+      newNode.next = newNode;
+      newNode.prev = newNode;
+      this.size++;
+      return;
+    }
+
+    let next = previous.next;
+
+    previous.next = newNode;
+    newNode.prev = previous;
+
+    newNode.next = next;
+    next.prev = newNode;
 
     this.size++;
   }
 
+  /**
+   * Delete a node from the list.
+   * @param {Vertex} node - Vertex to be deleted.
+   * @throws {Error} - If the node is null.
+   */
   delete(node) {
     if (node == null) {
       throw new Error("Input is Null!");
     }
 
-    if (node === this.head) {
-      updateHead();
+    // If it's the last Node
+    if (this.size == 1 && node == this.head) {
+      this.size = 0;
+      this.head = null;
+      return;
     }
 
-    // Connect prev and next
+    if (node === this.head) {
+      // Update the head
+      this.head = this.head.next;
+    }
+
     let prev = node.prev;
     let next = node.next;
-
-    if (prev != null) {
-      prev.next = next;
-    }
-
-    if (next != null) {
-      next.prev = prev;
-    }
+    prev.next = next;
+    next.prev = prev;
 
     this.size--;
-  }
-
-  updateHead() {
-    if (this.head.next != null) {
-      this.head = this.head.next;
-      return;
-    }
-
-    if (this.head.prev != null) {
-      this.head = this.head.prev;
-      return;
-    }
-
-    // no more nodes left
-    this.head = null;
-    return;
   }
 }
 
 /**
  * Create a doubly linked list of vertices from the initial array of points.
  * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates.
- * @returns {Array.<Vertex>} - Circular doubly linked list of vertices.
+ * @returns {CircularList} - Circular doubly linked list of vertices.
  * @throws {Error} - If less than 3 vertices are provided.
  */
 function createDoublyLinkedList(points) {
+  // Check if the number of points is less than 3
   if (points.length < 3) {
     throw new Error(`Needs at Least 3 Vertices, ${points.length} provided`);
   }
 
-  // Create a new vertex obj for every point in the list and add it to "Vertices"
-  const vertices = points.map((point) => new Vertex(point));
+  // Initialize a new CircularList to store the vertices
+  const vertices = new CircularList();
 
-  // Set up circular doubly-linked list
-  for (let i = 0; i < vertices.length; i++) {
-    vertices[i].next = vertices[(i + 1) % vertices.length];
-    vertices[i].prev = vertices[(i - 1 + vertices.length) % vertices.length];
+  // Iterate through each point in the input array
+  for (let i = 0; i < points.length; i++) {
+    // Create a new Vertex for each point
+    const newVertex = new Vertex(points[i]);
+    // Insert the new vertex into the circular list
+    vertices.insert(newVertex);
   }
 
+  // Return the populated circular doubly linked list
   return vertices;
 }
 
@@ -272,16 +276,18 @@ function naiveEarCutting(points) {
   }
 
   // Create a circular doubly linked list from the points array
-  const vertices = createDoublyLinkedList(points);
+  const vertices = new CircularList();
+  for (let i = 0; i < points.length; i++) {
+    vertices.insert(new Vertex(points[i]));
+  }
 
   const triangles = [];
 
-  let i = 1;
   // while remainingVertices > 3
-  while (vertices.length > 3) {
-    let len = vertices.length;
+  while (vertices.size > 3) {
+    let len = vertices.size;
 
-    let vertex = vertices.at(i % len);
+    let vertex = vertices.head;
 
     let curr = vertex.point;
     let prev = vertex.prev.point;
@@ -292,10 +298,7 @@ function naiveEarCutting(points) {
       triangles.push(prev, curr, next);
 
       // Remove the ear tip (keep only the new diagonal)
-      removeVertex(vertices, vertex);
-    } else {
-      // check Next Vertex
-      i++;
+      vertices.delete(vertex);
     }
   }
 
@@ -321,8 +324,14 @@ function optimizedEarCutting(points) {
   }
   /*-----------------*/
 
-  // Create a circular doubly-Linked List from the points
-  const vertices = createDoublyLinkedList(points);
+  // Create a circular doubly linked list from the points array
+  const vertices = new CircularList();
+  for (let i = 0; i < points.length; i++) {
+    vertices.insert(new Vertex(points[i]));
+  }
+
+  const concaveVertices = new CircularList();
+  const convexVertices = new CircularList();
 
   const triangles = [];
   const convexPoints = [];
