@@ -38,13 +38,8 @@ class CircularList {
    * Insert a new node after the previous node in the list.
    * @param {Vertex} newNode - New vertex to be inserted.
    * @param {Vertex} previous - Previous vertex after which the new node will be inserted.
-   * @throws {Error} - If the new node is null.
    */
   insert(newNode, previous) {
-    if (newNode == null) {
-      throw new Error("Input Node is Null");
-    }
-
     if (this.head == null) {
       this.head = newNode;
       newNode.next = newNode;
@@ -137,7 +132,7 @@ function triangulate(polygon, triangulationMethod = naiveEarCutting) {
  * @param {Array.<number>} a - Previous vertex.
  * @param {Array.<number>} b - Current vertex.
  * @param {Array.<number>} c - Next vertex.
- * @param {Array.<Array.<number>>} otherPoints - Other vertices in the polygon.
+ * @param {CircularList} otherPoints - Other vertices in the polygon.
  * @returns {boolean} - True if the vertex is an ear, false otherwise.
  */
 function isEar(a, b, c, otherPoints) {
@@ -147,13 +142,23 @@ function isEar(a, b, c, otherPoints) {
   }
 
   // Make sure no other points lie inside triangle O(N)
-  for (let i = 0; i < otherPoints.length; i++) {
-    const point = array[i];
+  let curr = otherPoints.head;
+  for (let i = 0; i < otherPoints.size; i++) {
+    const point = curr.point;
+    if (point === a || point === b || point === c) {
+      curr = curr.next;
+      continue;
+      // Don't check against the same point
+    }
+
     // if any points is in triangle return false
     if (isWithinTriangle(point, a, b, c)) {
       return false;
     }
+    curr = curr.next;
   }
+
+  return true;
 }
 
 /**
@@ -262,8 +267,11 @@ function isConvex(a, b, c) {
 
 /**
  * Naive ear cutting algorithm for polygon triangulation.
- * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates.
- * @returns {Array.<Array.<Array.<number>>>} - List of triangles.
+ * This algorithm works by iteratively removing "ears" from the polygon until only one triangle remains.
+ * An ear is a triangle formed by three consecutive vertices (a, b, c) such that no other vertex lies inside the triangle.
+ *
+ * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates representing the polygon vertices in clockwise order.
+ * @returns {Array.<Array.<Array.<number>>>} - List of triangles, where each triangle is represented by an array of three [x, y] coordinates.
  * @throws {Error} - If less than 3 vertices are provided.
  */
 function naiveEarCutting(points) {
@@ -275,18 +283,13 @@ function naiveEarCutting(points) {
     throw new Error(`Needs at Least 3 Vertices, ${points.len} provided`);
   }
 
-  // Create a circular doubly linked list from the points array
-  const vertices = new CircularList();
-  for (let i = 0; i < points.length; i++) {
-    vertices.insert(new Vertex(points[i]));
-  }
+  // Copy Points into a doubly linked circular List
+  const vertices = createDoublyLinkedList(points);
 
   const triangles = [];
 
   // while remainingVertices > 3
   while (vertices.size > 3) {
-    let len = vertices.size;
-
     let vertex = vertices.head;
 
     let curr = vertex.point;
@@ -295,7 +298,7 @@ function naiveEarCutting(points) {
 
     if (isEar(prev, curr, next)) {
       // Add new Triangle
-      triangles.push(prev, curr, next);
+      triangles.push([prev.slice(), curr.slice(), next.slice()]);
 
       // Remove the ear tip (keep only the new diagonal)
       vertices.delete(vertex);
@@ -303,74 +306,223 @@ function naiveEarCutting(points) {
   }
 
   // Add 3 remaining points
-  triangles.push(...remainingPoints);
+  let a = vertices.head.point;
+  let b = vertices.head.next.point;
+  let c = vertices.head.next.next.point;
+  triangles.push([a.slice(), b.slice(), c.slice()]);
 
   return triangles;
 }
 
 /**
  * Optimized ear cutting algorithm for polygon triangulation.
- * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates.
- * @returns {Array.<Array.<Array.<number>>>} - List of triangles.
+ * This algorithm improves upon the naive ear cutting method by maintaining separate lists of convex and concave vertices,
+ * and only checking convex vertices for ears.
+ *
+ * @param {Array.<Array.<number>>} points - Array of [x, y] coordinates representing the polygon vertices in clockwise order.
+ * @returns {Array.<Array.<Array.<number>>>} - List of triangles, where each triangle is represented by an array of three [x, y] coordinates.
  * @throws {Error} - If less than 3 vertices are provided.
  */
 function optimizedEarCutting(points) {
-  /*Input Checking */
-  // Check for no colinear vertices
-  // Check if polygon is simple
   // Check if input size is appropriate
   if (points.length < 3) {
-    throw new Error(`Needs at Least 3 Vertices, ${points.len} provided`);
+    throw new Error(`Needs at Least 3 Vertices, ${points.length} provided`);
   }
-  /*-----------------*/
 
   // Create a circular doubly linked list from the points array
-  const vertices = new CircularList();
-  for (let i = 0; i < points.length; i++) {
-    vertices.insert(new Vertex(points[i]));
-  }
+  const vertices = createDoublyLinkedList(points);
 
   const concaveVertices = new CircularList();
   const convexVertices = new CircularList();
 
   const triangles = [];
-  const convexPoints = [];
-  const concavePoints = [];
 
-  // Fill the Concave and convex List
-  for (const vertex of vertices) {
-    if (isConvex(vertex.prev.point, vertex.point, vertex.next.point)) {
-      vertex.isConvex = true;
-      convexList.push(vertex);
+  // Fill the concave and convex lists
+  let curr = vertices.head;
+  for (let i = 0; i < vertices.size; i++) {
+    if (isConvex(curr.prev.point, curr.point, curr.next.point)) {
+      curr.isConvex = true;
+      convexVertices.insert(curr);
     } else {
-      vertex.isConvex = false;
-      concaveList.push(vertex);
+      curr.isConvex = false;
+      concaveVertices.insert(curr);
     }
+    curr = curr.next;
   }
 
-  for (const vertex of convexPoints) {
-    vertex.isEar = true;
-    isEar();
+  // Mark initial ears
+  curr = convexVertices.head;
+  for (let i = 0; i < convexVertices.size; i++) {
+    curr.isEar = isEar(
+      curr.prev.point,
+      curr.point,
+      curr.next.point,
+      concaveVertices
+    );
+    curr = curr.next;
   }
 
   // We need only check convex points for ears
-  while (con.length > 3) {
-    let len = remainingPoints.length;
+  while (vertices.size > 3) {
+    curr = convexVertices.head;
+    for (let i = 0; i < convexVertices.size; i++) {
+      if (curr.isEar) {
+        // Add new Triangle
+        triangles.push([
+          curr.prev.point.slice(),
+          curr.point.slice(),
+          curr.next.point.slice(),
+        ]);
 
-    let prev = remainingPoints.at(i - (1 % len));
-    let curr = remainingPoints.at(i % len);
-    let next = remainingPoints.at(i + (1 % len));
+        // Remove the ear tip
+        vertices.delete(curr);
+        convexVertices.delete(curr);
 
-    if (isEar(prev, curr, next)) {
-      // Add new Triangle
-      triangles.push(prev, curr, next);
+        // Update the convex/concave status of the neighbors
+        let prev = curr.prev;
+        let next = curr.next;
 
-      // Remove "Vertex from List"
-      removeVertex(vertices, vertex);
-      remainingPoints.splice(i % len);
-    } else {
-      // check Next Vertex
-      i++;
+        if (isConvex(prev.prev.point, prev.point, prev.next.point)) {
+          prev.isConvex = true;
+          if (!convexVertices.head || prev.prev === convexVertices.head.prev) {
+            convexVertices.insert(prev);
+          }
+        } else {
+          prev.isConvex = false;
+          concaveVertices.insert(prev);
+        }
+
+        if (isConvex(next.prev.point, next.point, next.next.point)) {
+          next.isConvex = true;
+          if (!convexVertices.head || next.prev === convexVertices.head.prev) {
+            convexVertices.insert(next);
+          }
+        } else {
+          next.isConvex = false;
+          concaveVertices.insert(next);
+        }
+
+        // Update ear status of the neighbors
+        prev.isEar = isEar(
+          prev.prev.point,
+          prev.point,
+          prev.next.point,
+          vertices
+        );
+        next.isEar = isEar(
+          next.prev.point,
+          next.point,
+          next.next.point,
+          vertices
+        );
+
+        break;
+      }
+      curr = curr.next;
     }
   }
+
+  // Add the last remaining triangle
+  let a = vertices.head.point;
+  let b = vertices.head.next.point;
+  let c = vertices.head.next.next.point;
+  triangles.push([a.slice(), b.slice(), c.slice()]);
+
+  return triangles;
 }
+
+/**
+ * Check if two line segments intersect.
+ * @param {Array.<number>} p1 - First point of the first segment.
+ * @param {Array.<number>} q1 - Second point of the first segment.
+ * @param {Array.<number>} p2 - First point of the second segment.
+ * @param {Array.<number>} q2 - Second point of the second segment.
+ * @returns {boolean} - True if the segments intersect, false otherwise.
+ */
+function doIntersect(p1, q1, p2, q2) {
+  const o1 = getOrientation(p1, q1, p2);
+  const o2 = getOrientation(p1, q1, q2);
+  const o3 = getOrientation(p2, q2, p1);
+  const o4 = getOrientation(p2, q2, q1);
+
+  if (o1 !== o2 && o3 !== o4) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Check if a polygon is simple (no self-intersections).
+ * @param {Array.<Array.<number>>} polygon - Array of [x, y] coordinates representing the polygon vertices.
+ * @returns {boolean} - True if the polygon is simple, false otherwise.
+ */
+function isSimplePolygon(polygon) {
+  const n = polygon.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue;
+      if (
+        doIntersect(
+          polygon[i],
+          polygon[(i + 1) % n],
+          polygon[j],
+          polygon[(j + 1) % n]
+        )
+      ) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * Generate a random simple polygon with a specified number of vertices.
+ * @param {number} numVertices - Number of vertices.
+ * @returns {Array.<Array.<number>>} - Array of [x, y] coordinates representing the polygon vertices.
+ */
+function generateRandomSimplePolygon(numVertices) {
+  let polygon;
+  do {
+    polygon = generateRandomPolygon(numVertices);
+  } while (!isSimplePolygon(polygon));
+  return polygon;
+}
+
+/**
+ * Generate a random polygon with a specified number of vertices.
+ * @param {number} numVertices - Number of vertices.
+ * @returns {Array.<Array.<number>>} - Array of [x, y] coordinates representing the polygon vertices.
+ */
+function generateRandomPolygon(numVertices) {
+  const points = [];
+  for (let i = 0; i < numVertices; i++) {
+    const x = Math.random() * 100;
+    const y = Math.random() * 100;
+    points.push([x, y]);
+  }
+  return points;
+}
+
+/**
+ * Main method to test and time triangulation on randomly generated simple polygons.
+ */
+function main() {
+  const sizes = [100, 500, 1000, 5000, 10000];
+  for (let size of sizes) {
+    const polygon = generateRandomSimplePolygon(size);
+    console.log(`Polygon with ${size} vertices generated.`);
+
+    console.time(`Naive Ear Cutting (${size} vertices)`);
+    triangulate(polygon, naiveEarCutting);
+    console.timeEnd(`Naive Ear Cutting (${size} vertices)`);
+
+    console.time(`Optimized Ear Cutting (${size} vertices)`);
+    triangulate(polygon, optimizedEarCutting);
+    console.timeEnd(`Optimized Ear Cutting (${size} vertices)`);
+  }
+}
+
+// Run the main method
+main();
