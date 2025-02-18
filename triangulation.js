@@ -351,6 +351,8 @@ function optimizedEarCutting(points) {
   }
 
   // Mark initial ears
+  // Need only check Convex Vertices
+  // Intersection checks only against
   curr = convexVertices.head;
   for (let i = 0; i < convexVertices.size; i++) {
     curr.isEar = isEar(
@@ -362,7 +364,6 @@ function optimizedEarCutting(points) {
     curr = curr.next;
   }
 
-  // We need only check convex points for ears
   while (vertices.size > 3) {
     curr = convexVertices.head;
     for (let i = 0; i < convexVertices.size; i++) {
@@ -384,9 +385,7 @@ function optimizedEarCutting(points) {
 
         if (isConvex(prev.prev.point, prev.point, prev.next.point)) {
           prev.isConvex = true;
-          if (!convexVertices.head || prev.prev === convexVertices.head.prev) {
-            convexVertices.insert(prev);
-          }
+          convexVertices.insert(prev);
         } else {
           prev.isConvex = false;
           concaveVertices.insert(prev);
@@ -394,9 +393,7 @@ function optimizedEarCutting(points) {
 
         if (isConvex(next.prev.point, next.point, next.next.point)) {
           next.isConvex = true;
-          if (!convexVertices.head || next.prev === convexVertices.head.prev) {
-            convexVertices.insert(next);
-          }
+          convexVertices.insert(next);
         } else {
           next.isConvex = false;
           concaveVertices.insert(next);
